@@ -4,6 +4,7 @@ import web3
 # Systems:
 # brew install ipfs
 # brew install geth
+# brew install solidity
 # 
 # Dependencies: 
 # pip3 install web3
@@ -43,7 +44,26 @@ sensorSource = w3.eth.contract(
 
 print("SensorSource contract @ " + sensorSource.address)
 
-registeredEventsFilter = sensorSource.events.Registered.createFilter(fromBlock = 'latest')
+def listenTo(filter, handler):
+    import multiprocessing
+    import time
+    def run():
+        while True:
+            for event in filter.get_new_entries():
+                handler(event)
+            time.sleep(1)
+    proc = multiprocessing.Process(target = run)
+    proc.start()
+    return proc
+
+def handle_registration(registration): 
+    hash = registration.args.metaDataHash
+    ipfsHash = base58.b58encode(b'\x12\x20' + hash)
+    print("Sensor has been registered:")
+    print(" id:" + registration.args.sensorId)
+    print(" meta:" + ipfs.cat(ipfsHash))
+
+listenTo(sensorSource.events.Registered.createFilter(fromBlock = 'latest'), handle_registration)
 
 def register(sensorId, sensorMetaData):
     ipfsHash = ipfs.add_str(sensorMetaData)
@@ -60,15 +80,3 @@ def register(sensorId, sensorMetaData):
     return register_receipt
 
 register(sensorId, "Some nice metadata")
-
-print("")
-print("events")
-for event in registeredEventsFilter.get_new_entries():
-    #print(event)
-    hash = event.args.metaDataHash
-    #print(hash)
-    ipfsHash = base58.b58encode(b'\x12\x20' + hash)
-    #print(ipfsHash)
-    print("Sensor has been registered:")
-    print(" id:" + event.args.sensorId)
-    print(" meta:" + ipfs.cat(ipfsHash))
