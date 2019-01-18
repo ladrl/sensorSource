@@ -31,6 +31,25 @@ sensorSourceContract = solc.get_contract_instance(
     contract_name="SensorSource"
 )
 
+def register(sensorId, sensorMetaData):
+    ipfsHash = ipfs.add_str(sensorMetaData)
+    ipfsDecoded = base58.b58decode(ipfsHash)
+    metaDataHash = {
+            'hashFunction' : ipfsDecoded[0],
+            'length' : ipfsDecoded[1],
+            'data' : ipfsDecoded[2:]
+    }
+    register_receipt = w3.eth.waitForTransactionReceipt(
+        sensorSource.functions.register_native(
+            sensorId, 
+            metaDataHash['hashFunction'],
+            metaDataHash['length'],
+            metaDataHash['data']
+        ).transact({'from' : owner, 'gas': 100000})
+    )
+
+    return register_receipt
+
 def deploy(): 
     tx_receipt = w3.eth.waitForTransactionReceipt(
         sensorSourceContract.constructor().transact({'from' : owner})
@@ -57,26 +76,19 @@ def listenTo(filter, handler):
     return proc
 
 def handle_registration(registration): 
+    hashFunction = registration.args.metaDataHashFunction
+    hashLength = registration.args.metaDataHashLength
     hash = registration.args.metaDataHash
-    ipfsHash = base58.b58encode(b'\x12\x20' + hash)
+    ipfsHash = base58.b58encode(bytes([hashFunction, hashLength]) + hash[:hashLength])
     print("Sensor has been registered:")
     print(" id:" + registration.args.sensorId)
     print(" meta:" + ipfs.cat(ipfsHash))
 
 listenTo(sensorSource.events.Registered.createFilter(fromBlock = 'latest'), handle_registration)
 
-def register(sensorId, sensorMetaData):
-    ipfsHash = ipfs.add_str(sensorMetaData)
-    #print(ipfsHash)
-    metaDataHash = base58.b58decode(ipfsHash)[2:] # cut off the first 2 bytes indicating sha256 (0x12) and length (0x20)
-    #print(metaDataHash)
-    register_receipt = w3.eth.waitForTransactionReceipt(
-        sensorSource.functions.register(
-            sensorId, 
-            metaDataHash
-        ).transact({'from' : owner, 'gas': 100000})
-    )
-
-    return register_receipt
-
 register(sensorId, "Some nice metadata")
+
+def subscribe(): 
+    pass
+
+subscribe()

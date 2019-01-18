@@ -20,17 +20,23 @@ contract SensorSource {
     event Registered(
         address owner,
         address sensorId,
+        uint8 metaDataHashFunction,
+        uint8 metaDataHashLength,
         bytes32 metaDataHash
     );
 
     mapping(address => Registration) registrations;
 
-    function register(address sensorId, bytes32 metaDataHash) public {
+    function register_native(address sensorId, uint8 hashFunction, uint8 hashLength, bytes32 hashData) public {
+        register(sensorId, MultiHash(hashFunction, hashLength, hashData));
+    }
+
+    function register(address sensorId, MultiHash memory metaDataHash) public {
         require(msg.sender == owner);
         require(registrations[sensorId].owner == address(0));
         registrations[sensorId].owner = msg.sender;
-        registrations[sensorId].metaDataHash = MultiHash(0x12, 0x20, metaDataHash);
-        emit Registered(msg.sender, sensorId, registrations[sensorId].metaDataHash.data);        
+        registrations[sensorId].metaDataHash = metaDataHash;
+        emit Registered(msg.sender, sensorId, metaDataHash.hashFunction, metaDataHash.lengh, metaDataHash.data);        
     }
     
     function registration(address sensorId) public view returns (bool, bytes32) {
