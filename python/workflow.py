@@ -1,5 +1,5 @@
-import json
 import web3
+import logging
 
 # Systems:
 # brew install ipfs
@@ -20,6 +20,8 @@ from easysolc import Solc
 import os 
 scriptDir = os.path.dirname(__file__)
 
+#logging.getLogger("web3.RequestManager").setLevel('DEBUG')
+
 solc = Solc()
 ipfs = ipfsApi.Client()
 sensorId = w3.eth.accounts[1]
@@ -31,15 +33,21 @@ sensorSourceContract = solc.get_contract_instance(
     contract_name="SensorSource"
 )
 
+def decodeMultihash(ipfsHash):
+    decoded = base58.b58decode(ipfsHash)
+    return {
+        'hashFunction' : decoded[0],
+        'length' : decoded[1],
+        'data' : decoded[2:]
+    }
+
+def encodeMultihash(hashFunction, hashLength, hash):
+    return base58.b58encode(bytes([hashFunction, hashLength]) + hash[:hashLength])
+
 def register(sensorId, sensorMetaData):
     ipfsHash = ipfs.add_str(sensorMetaData)
-    ipfsDecoded = base58.b58decode(ipfsHash)
-    metaDataHash = {
-            'hashFunction' : ipfsDecoded[0],
-            'length' : ipfsDecoded[1],
-            'data' : ipfsDecoded[2:]
-    }
-    register_receipt = w3.eth.waitForTransactionReceipt(
+    metaDataHash = decodeMultihash(ipfsHash)
+    return w3.eth.waitForTransactionReceipt(
         sensorSource.functions.register_native(
             sensorId, 
             metaDataHash['hashFunction'],
@@ -48,7 +56,32 @@ def register(sensorId, sensorMetaData):
         ).transact({'from' : owner, 'gas': 100000})
     )
 
-    return register_receipt
+def subscribe(sensorId, requestList): 
+    count = len(requestList)
+    reqListHash = ipfs.add_str("\n".join(requestList))
+    multiHash = decodeMultihash(reqListHash)
+    tx_receipt = sensorSource.functions.subscribe_native(
+            sensorId,
+            multiHash['hashFunction'],
+            multiHash['length'],
+            multiHash['data'],
+            count
+        ).transact({'from' : owner, 'gas': 100000})
+    return w3.eth.waitForTransactionReceipt(tx_receipt)
+
+def publish(sensorId, publicationNumber, publication):
+    publicationHash = ipfs.add_str(publication)
+    print(publicationHash)
+    multiHash = decodeMultihash(publicationHash)
+    print(multiHash)
+    tx_receipt = sensorSource.functions.publish_native(
+            sensorId,
+            multiHash['hashFunction'],
+            multiHash['length'],
+            multiHash['data'],
+            publicationNumber
+        ).transact({'from' : sensorId, 'gas': 100000})
+    return w3.eth.waitForTransactionReceipt(tx_receipt)
 
 def deploy(): 
     tx_receipt = w3.eth.waitForTransactionReceipt(
@@ -63,32 +96,61 @@ sensorSource = w3.eth.contract(
 
 print("SensorSource contract @ " + sensorSource.address)
 
-def listenTo(filter, handler):
+def listenTo(filter_handler_pairs):
     import multiprocessing
     import time
     def run():
         while True:
-            for event in filter.get_new_entries():
-                handler(event)
+            try:
+                for (filter, handler) in filter_handler_pairs:
+                    for event in filter.get_new_entries():
+                        handler(event)
+            except ValueError:
+                print("ignore error")
             time.sleep(1)
     proc = multiprocessing.Process(target = run)
     proc.start()
     return proc
 
-def handle_registration(registration): 
-    hashFunction = registration.args.metaDataHashFunction
-    hashLength = registration.args.metaDataHashLength
-    hash = registration.args.metaDataHash
-    ipfsHash = base58.b58encode(bytes([hashFunction, hashLength]) + hash[:hashLength])
-    print("Sensor has been registered:")
+def handle_registration(registration):
+    args = registration.args
+    ipfsHash =  encodeMultihash(args.metaDataHashFunction, args.metaDataHashLength, args.metaDataHash)
+    print("Sensor " + args.sensorId + " has been registered:")
     print(" id:" + registration.args.sensorId)
     print(" meta:" + ipfs.cat(ipfsHash))
 
-listenTo(sensorSource.events.Registered.createFilter(fromBlock = 'latest'), handle_registration)
+def handle_subscription(subscription):
+    args = subscription.args
+    ipfsHash = encodeMultihash(args.metaDataHashFunction, args.metaDataHashLength, args.metaDataHash)
+    print("Sensor " + args.sensorId + " has been subscribed to for " + str(args.requestCount) + " requests")
+    print(" requests:" + ipfs.cat(ipfsHash))
 
+def handle_publication(publication):
+    args = publication.args
+    ipfsHash = encodeMultihash(args.metaDataHashFunction, args.metaDataHashLength, args.metaDataHash)
+    print("Sensor " + args.sensorId + " has published " + str(args.requestCount) + ":")
+    print(ipfs.cat(ipfsHash))
+
+listenTo([
+    (sensorSource.events.Subscribed.createFilter(fromBlock = 'latest'), handle_subscription),
+    (sensorSource.events.Registered.createFilter(fromBlock = 'latest'), handle_registration),
+    (sensorSource.events.Published.createFilter(fromBlock = 'latest'), handle_publication)
+])
+
+print("register")
 register(sensorId, "Some nice metadata")
+print("registration done")
 
-def subscribe(): 
-    pass
+print("subscribe")
+subscribe(sensorId, ["A", "B", "C"])
+print("subscription done")
 
-subscribe()
+print("publishing")
+import time
+time.sleep(5)
+publish(sensorId, 2, "For C")
+time.sleep(5)
+publish(sensorId, 1, "For B")
+time.sleep(5)
+publish(sensorId, 0, "For A")
+print("publishing done")
