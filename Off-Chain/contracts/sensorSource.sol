@@ -102,5 +102,23 @@ contract SensorSource {
             return false;
         }
     }
+
+    function publication(address sensorId) public view returns (
+        bool exists, 
+        uint8 hashFunction, 
+        uint8 hashLength, 
+        bytes32 requestListHash, 
+        uint256 nextRequestId
+    ) {
+        if (subscriptions[sensorId].requestListHash.data != 0) {
+            exists = true;
+            hashFunction = subscriptions[sensorId].requestListHash.hashFunction;
+            hashLength = subscriptions[sensorId].requestListHash.lengh;
+            requestListHash = subscriptions[sensorId].requestListHash.data;
+            nextRequestId = subscriptions[sensorId].resultCountDown;
+        } else {
+            exists = false;
+        }
+    }
     
 }

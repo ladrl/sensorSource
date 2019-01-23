@@ -6,6 +6,17 @@ import logging
 # brew install geth
 # brew install solidity
 # 
+# > geth account new
+# > geth account new
+# Add the created accounts to the genesis.json
+# > geth removedb --datadir .
+# > geth init --datadir . genesis.json
+# > geth --identity "MyTestNetNode" --nodiscover --networkid 1999 --datadir . --mine --miner.threads 5  console --rpc --rpccorsdomain "*"
+# On the console 
+# $ personal.unlockAccount(eth.accounts[0], "", 30000)
+# $ personal.unlockAccount(eth.accounts[1], "", 30000)
+
+
 # Dependencies: 
 # pip3 install web3
 # pip3 install base58
@@ -17,6 +28,12 @@ import base58
 from web3.auto import w3
 from easysolc import Solc
 
+def sensorPrivateKey():
+    with open( 'testnet/keystore/UTC--2019-01-17T09-23-30.699759000Z--b91df2b07643a88c323b7fcbad226b377a3fb857') as keyfile:
+        encrypted_key = keyfile.read()
+        private_key_sensorId = w3.eth.account.decrypt(encrypted_key, '')
+        return private_key_sensorId
+
 import os 
 scriptDir = os.path.dirname(__file__)
 
@@ -24,7 +41,7 @@ scriptDir = os.path.dirname(__file__)
 
 solc = Solc()
 ipfs = ipfsApi.Client()
-sensorId = w3.eth.accounts[1]
+sensorId = w3.toChecksumAddress('0xb91df2b07643a88c323b7fcbad226b377a3fb857')    #w3.eth.accounts[1]
 owner = w3.eth.accounts[0]
 
 sensorSourceContract = solc.get_contract_instance(
@@ -70,17 +87,27 @@ def subscribe(sensorId, requestList):
     return w3.eth.waitForTransactionReceipt(tx_receipt)
 
 def publish(sensorId, publicationNumber, publication):
+    print("Publish for " + sensorId + " with " + str(publicationNumber) + ": " + publication)
     publicationHash = ipfs.add_str(publication)
-    print(publicationHash)
     multiHash = decodeMultihash(publicationHash)
-    print(multiHash)
-    tx_receipt = sensorSource.functions.publish_native(
+    trx = sensorSource.functions.publish_native(
             sensorId,
             multiHash['hashFunction'],
             multiHash['length'],
             multiHash['data'],
             publicationNumber
-        ).transact({'from' : sensorId, 'gas': 100000})
+        ).buildTransaction({
+            'from' : sensorId, 
+            'gas': 100000,
+            'gasPrice': w3.eth.gasPrice,
+            'nonce' : w3.eth.getTransactionCount(sensorId),
+            'chainId' : 15
+        })
+    signedTrx = w3.eth.account.signTransaction(
+        trx,
+        sensorPrivateKey()
+    )
+    tx_receipt = w3.eth.sendRawTransaction(signedTrx.rawTransaction)
     return w3.eth.waitForTransactionReceipt(tx_receipt)
 
 def deploy(): 
@@ -96,21 +123,15 @@ sensorSource = w3.eth.contract(
 
 print("SensorSource contract @ " + sensorSource.address)
 
-def listenTo(filter_handler_pairs):
-    import multiprocessing
-    import time
-    def run():
-        while True:
-            try:
-                for (filter, handler) in filter_handler_pairs:
-                    for event in filter.get_new_entries():
-                        handler(event)
-            except ValueError:
-                print("ignore error")
-            time.sleep(1)
-    proc = multiprocessing.Process(target = run)
-    proc.start()
-    return proc
+def handleCount(filter_handler_pairs):
+    def l(count): 
+        actualCount = 0
+        while actualCount < count:
+            for (filter, handler) in filter_handler_pairs:
+                for event in filter.get_new_entries():
+                    handler(event)
+                    actualCount += 1
+    return l
 
 def handle_registration(registration):
     args = registration.args
@@ -131,7 +152,7 @@ def handle_publication(publication):
     print("Sensor " + args.sensorId + " has published " + str(args.requestCount) + ":")
     print(ipfs.cat(ipfsHash))
 
-listenTo([
+allEvents = handleCount([
     (sensorSource.events.Subscribed.createFilter(fromBlock = 'latest'), handle_subscription),
     (sensorSource.events.Registered.createFilter(fromBlock = 'latest'), handle_registration),
     (sensorSource.events.Published.createFilter(fromBlock = 'latest'), handle_publication)
@@ -141,16 +162,22 @@ print("register")
 register(sensorId, "Some nice metadata")
 print("registration done")
 
+allEvents(1)
+
 print("subscribe")
 subscribe(sensorId, ["A", "B", "C"])
 print("subscription done")
 
+allEvents(1)
+
+def nextPublishId(): 
+    return sensorSource.functions.publication(sensorId).call()[4]
+
 print("publishing")
-import time
-time.sleep(5)
-publish(sensorId, 2, "For C")
-time.sleep(5)
-publish(sensorId, 1, "For B")
-time.sleep(5)
-publish(sensorId, 0, "For A")
+publish(sensorId, nextPublishId(), "For C")
+print("next")
+publish(sensorId, nextPublishId(), "For B")
+print("next")
+publish(sensorId, nextPublishId(), "For A")
+print(sensorSource.functions.publication(sensorId).call())
 print("publishing done")
