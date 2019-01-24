@@ -37,7 +37,7 @@ def sensorPrivateKey():
 import os 
 scriptDir = os.path.dirname(__file__)
 
-#logging.getLogger("web3.RequestManager").setLevel('DEBUG')
+logging.getLogger("web3.RequestManager").setLevel('DEBUG')
 
 solc = Solc()
 ipfs = ipfsApi.Client()
@@ -46,7 +46,7 @@ owner = w3.eth.accounts[0]
 
 sensorSourceContract = solc.get_contract_instance(
     w3 = w3,
-    source = scriptDir + '/../Off-Chain/contracts/sensorSource.sol',
+    source = scriptDir + '/sensorSource/contracts/sensorSource.sol',
     contract_name="SensorSource"
 )
 
@@ -149,7 +149,7 @@ def handle_subscription(subscription):
 def handle_publication(publication):
     args = publication.args
     ipfsHash = encodeMultihash(args.metaDataHashFunction, args.metaDataHashLength, args.metaDataHash)
-    print("Sensor " + args.sensorId + " has published " + str(args.requestCount) + ":")
+    print("Sensor " + args.sensorId + " has published " + str(args) + ":")
     print(ipfs.cat(ipfsHash))
 
 allEvents = handleCount([
@@ -175,9 +175,9 @@ def nextPublishId():
 
 print("publishing")
 publish(sensorId, nextPublishId(), "For C")
-print("next")
+allEvents(1)
 publish(sensorId, nextPublishId(), "For B")
-print("next")
+allEvents(1)
 publish(sensorId, nextPublishId(), "For A")
-print(sensorSource.functions.publication(sensorId).call())
+allEvents(1)
 print("publishing done")

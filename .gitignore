@@ -1,2 +1,4 @@
 geth/
 history
+*.bin
+*.pyc

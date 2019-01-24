@@ -12,7 +12,7 @@ contract SensorSource {
         uint8 lengh;
         bytes32 data;
     }
-    
+
     struct Registration {
         address owner;
         MultiHash metaDataHash;
@@ -25,12 +25,13 @@ contract SensorSource {
         bytes32 metaDataHash
     );
     mapping(address => Registration) registrations;
-    function register_native(address sensorId, uint8 hashFunction, uint8 hashLength, bytes32 hashData) public {
+    function register_native(address sensorId, uint8 hashFunction, uint8 hashLength, bytes32 hashData) public returns (bool) {
         register(sensorId, MultiHash(hashFunction, hashLength, hashData));
     }
+
     function register(address sensorId, MultiHash memory metaDataHash) public {
-        require(msg.sender == owner);
-        require(registrations[sensorId].owner == address(0), "Sensor is already registered");
+        //require(msg.sender == owner, "Only the owner of this sensor source may register sensors");
+        //require(registrations[sensorId].owner == address(0), "Sensor is already registered");
         registrations[sensorId].owner = msg.sender;
         registrations[sensorId].metaDataHash = metaDataHash;
         emit Registered(
@@ -58,6 +59,7 @@ contract SensorSource {
     function subscribe_native(address sensorId, uint8 hashFunction, uint8 hashLength, bytes32 hashData, uint256 requestCount) public {
         subscribe(sensorId, MultiHash(hashFunction, hashLength, hashData), requestCount);
     }
+    // A subscription must pay for the sensor to actually publish the hashes + some benefit for it
     function subscribe(address sensorId, MultiHash memory requestListHash, uint256 requestCount) public {
         require(registrations[sensorId].owner != address(0), "Sensor is not registered");
         subscriptions[sensorId].requestListHash = requestListHash;
@@ -82,6 +84,8 @@ contract SensorSource {
     function publish_native(address sensorId, uint8 hashFunction, uint8 hashLength, bytes32 hashData, uint256 entryId) public {
         publish(sensorId, MultiHash(hashFunction, hashLength, hashData), entryId);
     }
+    // Publication should benefit the sensor, eg. there should be money sent to the sensorId to sustain the actual publishing and 
+    // maybe a final fulfilment payment
     function publish(address sensorId, MultiHash memory responseHash, uint256 entryId) public returns (bool) {
         require(registrations[sensorId].owner != address(0), "Sensor is not registered");
         bool publisherIsSensor = sensorId == msg.sender;
