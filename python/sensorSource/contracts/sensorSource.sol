@@ -30,8 +30,8 @@ contract SensorSource {
     }
 
     function register(address sensorId, MultiHash memory metaDataHash) public {
-        //require(msg.sender == owner, "Only the owner of this sensor source may register sensors");
-        //require(registrations[sensorId].owner == address(0), "Sensor is already registered");
+        require(msg.sender == owner, "Only the owner of this sensor source may register sensors");
+        require(registrations[sensorId].owner == address(0), "Sensor is already registered");
         registrations[sensorId].owner = msg.sender;
         registrations[sensorId].metaDataHash = metaDataHash;
         emit Registered(

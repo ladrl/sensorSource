@@ -1,13 +1,14 @@
 from web3.auto import w3
 import ipfsApi 
 
-from sensorSource import SensorSourceEvents
+from sensorSource import (SensorSourceEvents, encodeMultihash, MultiHash)
 
 import logging
 
-#logging.getLogger("web3.RequestManager").setLevel('DEBUG')
-#logging.getLogger("SensorSourceRegistry").setLevel('DEBUG')
+def pinRegistered(sensorId, args):
+    dataHash = encodeMultihash(MultiHash(args['metaDataHashFunction'], args['metaDataHashLength'], args['metaDataHash']))
+    ipfsApi.Client().pin_add(dataHash)
+    print("Pinning data for sensor " + sensorId)
 
-events = SensorSourceEvents(w3, handleRegistration = print)
-
-events.start()
+events = SensorSourceEvents(w3)
+events.listen(dict(Registered = pinRegistered))
