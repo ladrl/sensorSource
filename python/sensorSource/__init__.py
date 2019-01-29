@@ -169,8 +169,8 @@ class SensorSourceEvents:
                         for event in filter.get_new_entries():
                             try:
                                 handler(**dict(event.args))
-                            except:
-                                self._log.error('Handler {} failed with args: {}'.format(handler, str(event.args)))
+                            except Exception as e:
+                                self._log.error('Handler {} failed with args {}:\n{}'.format(handler, str(event.args), e))
                     time.sleep(timeout)
         self._poller = Process(target = poll)
         self._poller.start()

@@ -17,33 +17,30 @@ def sensor(password, sensorKeyFile, sensor, contractAddressFile):
         events = SensorSourceEvents(w3, contractAddress)
 
         def handleSubscription(metaDataHashFunction, metaDataHashLength, metaDataHash, requestCount, sensorId):
-            source = SensorSource(w3, ipfsApi.Client(), contractAddress)
-            sourceOnwerSigningCallback = signWithPassword(sensorKeyFile, password)
+            if to_checksum_address(sensor) == sensorId:
+                source = SensorSource(w3, ipfsApi.Client(), contractAddress)
+                sourceOnwerSigningCallback = signWithPassword(sensorKeyFile, password)
 
-            requests = ipfsApi.Client().cat(encodeMultihash(MultiHash(metaDataHashFunction, metaDataHashLength, metaDataHash)))
+                requests = ipfsApi.Client().cat(encodeMultihash(MultiHash(metaDataHashFunction, metaDataHashLength, metaDataHash)))
 
-            publicationId = requestCount
-            for pendingRequest in requests.splitlines():
-                #values = [input('Publication #{} reading #{}: '.format(publicationId, i)) for i in range(int(pendingRequest))]
-                values = ['Sensor {}, publication #{}, reading #{}'.format(sensorId, publicationId, i) for i in range(int(pendingRequest))]
-                result = source.publish(
-                        sensorId,
-                        publicationId,
-                        '\n'.join(values),
-                        sourceOnwerSigningCallback
-                )
-                if result['success']:
-                    print('Sensor values published as id {}'.format(publicationId))
-                    publicationId -= 1 
-                else:
-                    print('Registration failed: {}', result['error'])
+                publicationId = requestCount
+                for pendingRequest in requests.splitlines():
+                    #values = [input('Publication #{} reading #{}: '.format(publicationId, i)) for i in range(int(pendingRequest))]
+                    values = ['Sensor {}, publication #{}, reading #{}'.format(sensorId, publicationId, i) for i in range(int(pendingRequest))]
+                    result = source.publish(
+                            sensorId,
+                            publicationId,
+                            '\n'.join(values),
+                            sourceOnwerSigningCallback
+                    )
+                    if result['success']:
+                        print('Sensor values published as id {}'.format(publicationId))
+                        publicationId -= 1 
+                    else:
+                        print('Registration failed: {}', result['error'])
 
-
-        def filterForId(id, args):
-            if(id == sensorId):
-                handleSubscription(**args)
         print('Waiting for subscription to sensor @ {} on sensorSource @ {}'.format(sensorId, contractAddress))
-        events.listen(handlers=dict(Subscribed = filterForId))
+        events.listen(handlers=dict(Subscribed = handleSubscription))
 
 
 if __name__ == "__main__":
