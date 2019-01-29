@@ -5,7 +5,7 @@ import ipfsApi
 
 from sensorSource import (SensorSource, signWithPassword, decodeMultihash)
 
-def subscribeToSensor(subscriber, password, subscribersKeyFile, sensor, contractAddressFile, requestCount):
+def subscribeToSensor(subscriber, password, subscribersKeyFile, sensor, contractAddressFile, requestCount, readings):
     with open(contractAddressFile, 'r') as f: 
         contractAddress = f.read()
 
@@ -16,9 +16,7 @@ def subscribeToSensor(subscriber, password, subscribersKeyFile, sensor, contract
 
         sensorId = to_checksum_address(sensor)
 
-        requestEntries = ['Requests for {}:'.format(subscriberId)] + [
-                            '{}: Some entry spec'.format(i) for i in range(requestCount)
-                        ]
+        requestEntries = [str(readings) for i in range(requestCount)]
 
         result = source.subscribe(
             sensorId, 
@@ -66,6 +64,13 @@ if __name__ == "__main__":
         type=int,
         help='How many requests to subscribe for',
         default=20
+    )
+    parser.add_argument(
+        '--readings',
+        metavar='<readings per request>',
+        type=int,
+        help='How many readings to perform per request',
+        default=10
     )
     parser.add_argument(
         '--contractAddressFile',

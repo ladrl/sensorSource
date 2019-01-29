@@ -115,17 +115,21 @@ class SensorSource:
     def publish(self, sensorId, publicationNumber, publication, signCallback):
         self._log.info("Publish as " + sensorId)
         publicationHash = self.ipfs_add_str(publication)
-        trx = self.__contract.functions.publish_native(
-                sensorId,
-                publicationHash.function,
-                publicationHash.length,
-                publicationHash.hashData,
-                publicationNumber
-            ).buildTransaction(self._trxDict(sensorId))
-        signedTrx = signCallback(trx)
-        return self.__w3.eth.waitForTransactionReceipt(
-            self.__w3.eth.sendRawTransaction(signedTrx.rawTransaction)
-        )
+        try:
+            trx = self.__contract.functions.publish_native(
+                    sensorId,
+                    publicationHash.function,
+                    publicationHash.length,
+                    publicationHash.hashData,
+                    publicationNumber
+                ).buildTransaction(self._trxDict(sensorId))
+            signedTrx = signCallback(trx)
+            result = self.__w3.eth.waitForTransactionReceipt(
+                self.__w3.eth.sendRawTransaction(signedTrx.rawTransaction)
+            )
+            return dict(success=True, result = result)
+        except ValueError as e:
+            return dict(success=False, error = e)
 
 
 class SensorSourceEvents:
