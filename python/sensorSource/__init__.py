@@ -96,17 +96,21 @@ class SensorSource:
         self._log.info("Subscribe to sensor " + sensorId)
         count = len(requestList)
         reqListHash = self.ipfs_add_str("\n".join(requestList))
-        trx = self.__contract.functions.subscribe_native(
-                sensorId,
-                reqListHash.function,
-                reqListHash.length,
-                reqListHash.hashData,
-                count
-            ).buildTransaction(self._trxDict(subscriber))
-        signedTrx = signCallback(trx)
-        return self.__w3.eth.waitForTransactionReceipt(
-            self.__w3.eth.sendRawTransaction(signedTrx.rawTransaction)
-        )
+        try:
+            trx = self.__contract.functions.subscribe_native(
+                    sensorId,
+                    reqListHash.function,
+                    reqListHash.length,
+                    reqListHash.hashData,
+                    count
+                ).buildTransaction(self._trxDict(subscriber))
+            signedTrx = signCallback(trx)
+            result = self.__w3.eth.waitForTransactionReceipt(
+                self.__w3.eth.sendRawTransaction(signedTrx.rawTransaction)
+            )
+            return dict(success=True, result = result)
+        except ValueError as e:
+            return dict(success=False, error = e)
 
     def publish(self, sensorId, publicationNumber, publication, signCallback):
         self._log.info("Publish as " + sensorId)
