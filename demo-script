@@ -3,8 +3,6 @@ tmux set -g pane-border-status bottom
 tmux set -g pane-border-format "#{pane_index} ${pane_current_command}"
 
 # Setup ethereum network
-tmux send-keys 'cd /Users/lla/Documents/Talks/BETH'
-tmux send-keys C-M
 tmux send-keys 'geth removedb --datadir testnet'
 tmux send-keys C-M
 tmux send-keys 'y'
