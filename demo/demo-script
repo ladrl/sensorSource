@@ -3,35 +3,35 @@ tmux set -g pane-border-status bottom
 tmux set -g pane-border-format "#{pane_index} ${pane_current_command}"
 
 # Setup ethereum network
-tmux send-keys 'geth removedb --datadir testnet'
+tmux send-keys 'geth removedb --datadir ../testnet'
 tmux send-keys C-M
 tmux send-keys 'y'
 tmux send-keys C-M
 tmux send-keys 'y'
 tmux send-keys C-M
-tmux send-keys 'geth init --datadir ./testnet ./testnet/genesis.json'
+tmux send-keys 'geth init --datadir ../testnet ../testnet/genesis.json'
 tmux send-keys C-M
-tmux send-keys 'geth --identity "MyTestNetNode" --nodiscover --networkid 1999 --datadir ./testnet --mine --miner.threads 1 --rpc --rpccorsdomain "*"'
+tmux send-keys 'geth --identity "MyTestNetNode" --nodiscover --networkid 1999 --datadir ../testnet --mine --miner.threads 1 --rpc --rpccorsdomain "*"'
 tmux send-keys C-M
 
 # Setup contract and register sensor
 tmux split-window -t demosession:0.0 -h bash
 tmux select-pane -t demosession:0.1
 
-tmux send-keys 'python3.7 ./python/deployContract.py'
+tmux send-keys 'python3.7 ../python/deployContract.py'
 tmux send-keys C-M
 
-tmux send-keys 'python3.7 ./python/registerSensor.py'
+tmux send-keys 'python3.7 ../python/registerSensor.py'
 tmux send-keys C-M
 
-tmux send-keys 'python3.7 ./python/sensor.py'
+tmux send-keys 'python3.7 ../python/sensor.py'
 tmux send-keys C-M
 
 # Start consumer
 tmux split-window -t demosession:0.0 -v bash
-tmux send-keys 'python3.7 ./python/sensorDataConsumer.py'
+tmux send-keys 'python3.7 ../python/sensorDataConsumer.py'
 tmux send-keys C-M
 
 tmux split-window -t demosession:0.2 -v bash
-tmux send-keys 'python3.7 ./python/subscribeToSensor.py'
+tmux send-keys 'python3.7 ../python/subscribeToSensor.py'
 tmux send-keys C-M

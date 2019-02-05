@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--subscribersKeyFile',
         metavar='<owner-key-file>',
-        default='./testnet/keystore/UTC--2019-01-29T12-01-37.019819000Z--b7681870d74a882df35ca4e3712668fe8d24c146'
+        default='../testnet/keystore/UTC--2019-01-29T12-01-37.019819000Z--b7681870d74a882df35ca4e3712668fe8d24c146'
     )
     parser.add_argument(
         '--sensor', 

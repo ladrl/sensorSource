@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--ownerKeyFile',
         metavar='<owner-key-file>',
-        default='./testnet/keystore/UTC--2019-01-17T09-04-39.652187000Z--92a793e3683de328c955eb1464aa9354833bfbe4'
+        default='../testnet/keystore/UTC--2019-01-17T09-04-39.652187000Z--92a793e3683de328c955eb1464aa9354833bfbe4'
     )
     parser.add_argument(
         '--sensor', 

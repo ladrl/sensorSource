@@ -13,5 +13,4 @@ tmux new-session -s $session_name -n $demo_name -d -c $base_path bash
 echo - Start presentation terminal
 #bash -c 'open -a Alacritty.app --args -vvv --config-file $base_path/presentation.yml -e tmux attach-session -d $session_name'&
 bash -c '/Volumes/Macintosh\ HD/Applications/Alacritty.app/Contents/MacOS/alacritty --config-file ./presentation.yml -e tmux attach-session -d $session_name'&
-vim $session_file
-
+vim $session_file -c 'map <PageDown> :.w !grep ^tmux \| bash<CR><CR>/^tmux<CR>mp'

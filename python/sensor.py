@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--sensorKeyFile',
         metavar='<sensor-key-file>',
-        default='./testnet/keystore/UTC--2019-01-17T09-23-30.699759000Z--b91df2b07643a88c323b7fcbad226b377a3fb857'
+        default='../testnet/keystore/UTC--2019-01-17T09-23-30.699759000Z--b91df2b07643a88c323b7fcbad226b377a3fb857'
     )
     parser.add_argument(
         '--sensor', 
